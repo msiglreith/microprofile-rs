@@ -1,0 +1,4 @@
+[submodule "microprofile-sys/microprofile"]
+	path = microprofile-sys/microprofile
+	url = https://github.com/msiglreith/microprofile.git
+    branch = rust

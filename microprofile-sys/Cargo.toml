@@ -1,0 +1,27 @@
+[package]
+name = "microprofile-sys"
+version = "0.1.0"
+authors = ["msiglreith <msiglreith@users.noreply.github.com>"]
+build = "build.rs"
+links = "microprofile"
+license = "MIT/Apache-2.0"
+
+[features]
+dx11 = []
+dx12 = []
+vulkan = ["vk-sys"]
+gl = []
+
+[dependencies]
+libc = "0.2"
+
+[dependencies.vk-sys]
+version = "0.2.1"
+optional = true
+
+[build-dependencies]
+gcc = "0.3"
+
+[lib]
+name = "microprofile_sys"
+path = "lib.rs"

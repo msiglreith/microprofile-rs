@@ -1,0 +1,20 @@
+[package]
+name = "microprofile"
+version = "0.1.0"
+authors = ["msiglreith <msiglreith@users.noreply.github.com>"]
+
+[dependencies]
+microprofile-sys = { path = "microprofile-sys", version = "0.1.0" }
+libc = "0.2"
+glutin = "0.7"
+lazy_static = "0.1"
+
+[features]
+dx11 = ["microprofile-sys/dx11"]
+dx12 = ["microprofile-sys/dx12"]
+vulkan = ["microprofile-sys/vulkan"]
+gl = ["microprofile-sys/gl"]
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"
