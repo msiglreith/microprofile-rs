@@ -1,0 +1,11 @@
+[package]
+name = "microprofile-plugin"
+version = "0.1.0"
+authors = ["msiglreith <msiglreith@users.noreply.github.com>"]
+
+[lib]
+name = "microprofile_plugin"
+plugin = true
+
+[dependencies]
+microprofile = { path = ".." }

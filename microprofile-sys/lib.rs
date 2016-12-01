@@ -130,7 +130,7 @@ extern {
 	pub fn MicroProfileSetCurrentNodeD3D12(node: u32);
 
 	#[cfg(feature = "vulkan")]
-	pub fn MicroProfileGpuInitVulkan(device: *mut vk::Device, physical_devices: *mut vk::PhysicalDevice, queues: *mut vk::Queue, queue_family: u32, node_count: u32);
+	pub fn MicroProfileGpuInitVulkan(devices: *mut vk::Device, physical_devices: *mut vk::PhysicalDevice, queues: *mut vk::Queue, queue_family: u32, node_count: u32);
 	#[cfg(feature = "vulkan")]
 	pub fn MicroProfileSetCurrentNodeVulkan(node: u32);
 

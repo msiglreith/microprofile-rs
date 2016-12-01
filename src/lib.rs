@@ -4,6 +4,12 @@ extern crate lazy_static;
 extern crate libc;
 extern crate microprofile_sys;
 
+#[cfg(feature = "vulkan")]
+extern crate vk_sys as vk;
+
+#[cfg(any(feature = "dx11", feature = "dx12"))]
+extern crate winapi;
+
 use std::ffi::CString;
 use std::ops::*;
 
@@ -196,10 +202,14 @@ impl Into<u32> for Color {
     }
 }
 
-enum GpuContext {
-    D3d11,
-    D3d12,
-    Vulkan,
+pub enum GpuContext {
+    #[cfg(feature = "dx11")]
+    D3D11(*mut winapi::ID3D11DeviceContext),
+    #[cfg(feature = "dx12")]
+    D3D12(*mut winapi::ID3D12GraphicsCommandList),
+    #[cfg(feature = "vulkan")]
+    Vulkan(vk::CommandBuffer),
+    #[cfg(feature = "gl")]
     GL,
     None,
 }
@@ -223,11 +233,9 @@ impl Profiler {
         &PROFILER
     }
     #[cfg(feature = "gl")]
-    pub fn init_gl<F>(&self, f: F) where F: Fn(&str) -> *mut libc::c_void {
+    pub fn init_gl<F>(&mut self, f: F) where F: Fn(&str) -> *mut libc::c_void {
         use std::ffi::CStr;
         use libc::*;
-        let user = &f as *const _ as *mut c_void;
-        unsafe { microprofile_sys::MicroProfileGpuInitGL(init_gl_wrapper::<F>, user); }
 
         extern fn init_gl_wrapper<F>(string: *const c_char, closure: *mut c_void) -> *mut c_void where F: Fn(&str) -> *mut c_void {
             let opt_closure = closure as *mut F;
@@ -237,11 +245,15 @@ impl Profiler {
                 ret as *mut _
             }
         }
+
+        let user = &f as *const _ as *mut c_void;
+        unsafe { microprofile_sys::MicroProfileGpuInitGL(init_gl_wrapper::<F>, user); }
+        self.gpu_context = GpuContext::OpenGL;
     }
 
     #[cfg(feature = "dx11")]
-    pub fn init_dx11(&self) {
-        unsafe { microprofile_sys::MicroProfileGpuInitD3D11(std::ptr::null_mut(), std::ptr::null_mut()); } // TODO
+    pub fn init_dx11(&self, device: *mut winapi::ID3D11Device, immediate_context: *mut winapi::ID3D11DeviceContext) {
+        unsafe { microprofile_sys::MicroProfileGpuInitD3D11(device as *mut libc::c_void, immediate_context as *mut libc::c_void); }
     }
 
     #[cfg(feature = "dx12")]
@@ -250,8 +262,8 @@ impl Profiler {
     }
 
     #[cfg(feature = "vulkan")]
-    pub fn init_dx12(&self, queue_family: u32, node_count: u32) {
-        unsafe { microprofile_sys::MicroProfileGpuInitVulkan(std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), queue_family, node_count); } // TODO
+    pub fn init_vulkan(&self, devices: &mut [vk::Device], physical_devices: &mut [vk::PhysicalDevice], queues: &mut [vk::Queue], queue_family: u32, node_count: u32) {
+        unsafe { microprofile_sys::MicroProfileGpuInitVulkan(devices.as_mut_ptr(), physical_devices.as_mut_ptr(), queues.as_mut_ptr(), queue_family, node_count); } // TODO
     }
 
     pub fn enable_all_groups(&self, enable: bool) {
@@ -262,8 +274,18 @@ impl Profiler {
         unsafe { microprofile_sys::MicroProfileSetForceMetaCounters(enable as i32); }
     }
 
-    pub fn flip(&self) {
-        unsafe { microprofile_sys::MicroProfileFlip(std::ptr::null_mut()); } // TODO
+    pub fn flip(&self, gpu_context: GpuContext) {
+        let context = match gpu_context {
+            #[cfg(feature = "dx11")]
+            GpuContext::D3D11(cx) => cx as *mut libc::c_void,
+            #[cfg(feature = "dx12")]
+            GpuContext::D3D12(cx) => cx as *mut libc::c_void,
+            #[cfg(feature = "vulkan")]
+            GpuContext::Vulkan(cx) => cx as *mut libc::c_void,
+            _ => std::ptr::null_mut(),
+        };
+
+        unsafe { microprofile_sys::MicroProfileFlip(context); }
     }
 
     pub fn begin_thread(&self, name: &str) {
