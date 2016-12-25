@@ -5,7 +5,7 @@ extern crate rustc_plugin;
 extern crate microprofile;
 
 use rustc_plugin::registry::Registry;
-use syntax::ast::{Block, Expr, ExprKind, Item, ItemKind, Mac, MetaItem};
+use syntax::ast::{Block, Expr, ExprKind, Item, ImplItem, TraitItem, ItemKind, Mac, Mod, MetaItem};
 use syntax::fold::{self, Folder};
 use syntax::symbol::Symbol;
 use syntax::ext::base::{Annotatable, ExtCtxt, SyntaxExtension};
@@ -38,9 +38,23 @@ impl<'a, 'ecx> Folder for ScopeFolder<'a, 'ecx> {
         if let ItemKind::Mac(_) = i.node {
             return i;
         } else {
+            let name = i.ident.name;
+            println!("{:?}", i.ident.name);
             self.symbol = i.ident.name;
             fold::noop_fold_item_simple(i, self)
         }
+    }
+
+    fn fold_impl_item(&mut self, i: ImplItem) -> SmallVector<ImplItem> {
+        println!("{:?} {:?}", self.symbol, i.ident.name);
+        self.symbol = i.ident.name;
+        fold::noop_fold_impl_item(i, self)
+    }
+
+    fn fold_trait_item(&mut self, i: TraitItem) -> SmallVector<TraitItem> {
+        println!("{:?} {:?}", self.symbol, i.ident.name);
+        self.symbol = i.ident.name;
+        fold::noop_fold_trait_item(i, self)
     }
 
     fn fold_block(&mut self, block: P<Block>) -> P<Block> {
@@ -54,9 +68,7 @@ impl<'a, 'ecx> Folder for ScopeFolder<'a, 'ecx> {
                 let group = category.define_group("trace", ::microprofile::Color(40, 0, 250));
                 let mut scope = group.get_cpu_scope($name, ::microprofile::Color(250, 0, 100));
                 scope.enter();
-                println!("begin {:?}", $name);
                 let r = $block;
-                println!("end {:?}", $name);
                 scope.leave();
                 r
             }).unwrap()
