@@ -39,20 +39,17 @@ impl<'a, 'ecx> Folder for ScopeFolder<'a, 'ecx> {
             return i;
         } else {
             let name = i.ident.name;
-            println!("{:?}", i.ident.name);
             self.symbol = i.ident.name;
             fold::noop_fold_item_simple(i, self)
         }
     }
 
     fn fold_impl_item(&mut self, i: ImplItem) -> SmallVector<ImplItem> {
-        println!("{:?} {:?}", self.symbol, i.ident.name);
         self.symbol = i.ident.name;
         fold::noop_fold_impl_item(i, self)
     }
 
     fn fold_trait_item(&mut self, i: TraitItem) -> SmallVector<TraitItem> {
-        println!("{:?} {:?}", self.symbol, i.ident.name);
         self.symbol = i.ident.name;
         fold::noop_fold_trait_item(i, self)
     }
@@ -60,13 +57,13 @@ impl<'a, 'ecx> Folder for ScopeFolder<'a, 'ecx> {
     fn fold_block(&mut self, block: P<Block>) -> P<Block> {
         block.map(|block| {
             let name = self.ecx.expr_str(DUMMY_SP, self.symbol);
-            println!("{:?}", name);
             quote_block!(self.ecx, {
                 use ::microprofile::Scope;
                 let profiler = ::microprofile::Profiler::global();
                 let category = profiler.define_category("profile");
                 let group = category.define_group("trace", ::microprofile::Color(40, 0, 250));
-                let mut scope = group.get_cpu_scope($name, ::microprofile::Color(250, 0, 100));
+                let name = format!("{}::{}", module_path!(), $name);
+                let mut scope = group.get_cpu_scope(name.as_str(), ::microprofile::Color(250, 0, 100));
                 scope.enter();
                 let r = $block;
                 scope.leave();
